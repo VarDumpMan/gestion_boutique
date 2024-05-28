@@ -1,0 +1,6 @@
+Fichier à Toucher pour le travail :
+
+- SellPosController.php
+- Retrouver les tables nécessaires, leurs modèles
+
+cash_registers, cash_register_transactions, transactions. 

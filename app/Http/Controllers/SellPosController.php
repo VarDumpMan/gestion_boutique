@@ -251,9 +251,11 @@ class SellPosController extends Controller
         //pos screen view from module
         $pos_module_data = $this->moduleUtil->getModuleData('get_pos_screen_view', ['sub_type' => $sub_type, 'job_sheet_id' => request()->get('job_sheet_id')]);
         $invoice_layouts = InvoiceLayout::forDropdown($business_id);
+        // dump($invoice_layouts);
 
         $invoice_schemes = InvoiceScheme::forDropdown($business_id);
         $default_invoice_schemes = InvoiceScheme::getDefault($business_id);
+        // dump($default_invoice_schemes);
 
         $edit_discount = auth()->user()->can('edit_product_discount_from_pos_screen');
         $edit_price = auth()->user()->can('edit_product_price_from_pos_screen');
@@ -1878,7 +1880,7 @@ class SellPosController extends Controller
                                 ->where('id', $transaction_id)
                                 ->with(['location'])
                                 ->first();
-
+                
                 if (empty($transaction)) {
                     return $output;
                 }
@@ -2066,6 +2068,7 @@ class SellPosController extends Controller
             if (! empty($pos_settings['enable_payment_link']) && $transaction->payment_status != 'paid') {
                 $payment_link = $this->transactionUtil->getInvoicePaymentLink($transaction->id, $transaction->business_id);
             }
+            dump($receipt);
 
             $title = $transaction->business->name.' | '.$transaction->invoice_no;
 
