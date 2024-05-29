@@ -778,25 +778,18 @@ class SellPosController extends Controller
         } else {
             $layout = ! empty($receipt_details->design) ? 'sale_pos.receipts.'.$receipt_details->design : 'sale_pos.receipts.classic';
             // dump($receipt_details);
-            // dd(str_replace('.', '', explode('€ ', $receipt_details->payments[0]["amount"])[1]));
 
             $datasValidated = [
                 "ifu" => config('app.administrator_company_ifu'),
                 "type" => "FV",
-                "items" => [
-                    [
-                        "name" => "Jus d'orange",
-                        "price" => 1800,
-                        "quantity" => 2,
-                        "taxGroup" => "B"
-                    ],
-                    [
-                        "name" => "Lait 1/1 EX",
-                        "price" => 450,
-                        "quantity" => 3,
+                "items" => array_map(function ($row) {
+                    return [
+                        "name" => $row['name'],
+                        "quantity" => (int) $row['quantity_uf'],
+                        "price" => (float) $row['unit_price_uf'],
                         "taxGroup" => "A"
-                    ]
-                ],
+                    ];
+                }, $receipt_details->lines),
                 "client" => [
                     "contact" => (isset($receipt_details->customer_mobile) ? $receipt_details->customer_mobile : ""),
                     "ifu" => "",
@@ -2121,6 +2114,7 @@ class SellPosController extends Controller
     public function showInvoice($token)
     {
         $transaction = Transaction::where('invoice_token', $token)->with(['business', 'location'])->first();
+        // dd($transaction);
 
         if (! empty($transaction)) {
             $invoice_layout_id = $transaction->is_direct_sale ? $transaction->location->sale_invoice_layout_id : null;
