@@ -635,6 +635,7 @@
     @endif
     
 </div>
+
 <div class="row" style="color: #000000 !important;">
 	@if(!empty($receipt_details->footer_text))
 	<div class="@if($receipt_details->show_barcode || $receipt_details->show_qr_code) col-xs-8 @else col-xs-12 @endif">
@@ -654,3 +655,38 @@
 		</div>
 	@endif
 </div>
+
+@if (!is_null($datas))
+<div class="row" style="color: #000000 !important; padding: 1em">
+	<div style="font-style: italic;">
+		--- Eléments de sécurité de la facture normalisée --
+	</div>
+	<div class="col-md-12" style="margin-bottom: 15px"><hr/></div>
+	<div class="col-xs-6">
+		{!! $qrcode !!}
+	</div>
+
+	<div class="col-xs-6">
+		<p class="text-center">
+			Code MECeF/DGI 
+		</p>
+		<p class="text-center" style="font-weight: bold">{{ $datas['codeMECeFDGI'] }}</p>
+		
+		<table class="table table-slim">
+			<tr>
+				<td class="text-left">MECeF NIM</td>
+				<td class="text-right">{{ $datas['nim'] }}</td>
+			</tr>
+			<tr>
+				<td class="text-left">MECeF Compteurs</td>
+				<td class="text-right">{{ $datas['counters'] }}</td>
+			</tr>
+			<tr>
+				<td class="text-left">MECeF Heure</td>
+				<td class="text-right">{{ $datas['dateTime'] }}</td>
+			</tr>
+		</table>
+    </div>
+    
+</div>
+@endif

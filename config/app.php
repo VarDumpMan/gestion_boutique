@@ -55,6 +55,14 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'api_gouv_token' => env('API_GOUV_TOKEN'),
+
+    'api_facturation_url' => env('API_FACTURATION_URL'),
+
+    'api_information_url' => env('API_INFORMATION_URL'),
+
+    'administrator_company_ifu' => env('ADMINISTRATOR_COMPANY_IFU'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

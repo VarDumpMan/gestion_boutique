@@ -64,6 +64,9 @@ use Stripe\Stripe;
 use Yajra\DataTables\Facades\DataTables;
 use App\Events\SellCreatedOrModified;
 
+use Illuminate\Support\Facades\Http;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+
 class SellPosController extends Controller
 {
     /**
@@ -82,6 +85,8 @@ class SellPosController extends Controller
     protected $moduleUtil;
 
     protected $notificationUtil;
+
+    protected $api_token, $url_facturation;
 
     /**
      * Constructor
@@ -108,6 +113,9 @@ class SellPosController extends Controller
 
         $this->dummyPaymentLine = ['method' => 'cash', 'amount' => 0, 'note' => '', 'card_transaction_number' => '', 'card_number' => '', 'card_type' => '', 'card_holder_name' => '', 'card_month' => '', 'card_year' => '', 'card_security' => '', 'cheque_number' => '', 'bank_account_number' => '',
             'is_return' => 0, 'transaction_no' => '', ];
+    
+        $this->api_token = config("app.api_gouv_token");
+        $this->url_facturation = config("app.api_facturation_url");
     }
 
     /**
@@ -724,6 +732,7 @@ class SellPosController extends Controller
         ];
 
         $business_details = $this->businessUtil->getDetails($business_id);
+        
         $location_details = BusinessLocation::find($location_id);
 
         if ($from_pos_screen && $location_details->print_receipt_on_invoice != 1) {
@@ -768,8 +777,62 @@ class SellPosController extends Controller
             $output['data'] = $receipt_details;
         } else {
             $layout = ! empty($receipt_details->design) ? 'sale_pos.receipts.'.$receipt_details->design : 'sale_pos.receipts.classic';
+            // dump($receipt_details);
+            // dd(str_replace('.', '', explode('€ ', $receipt_details->payments[0]["amount"])[1]));
 
-            $output['html_content'] = view($layout, compact('receipt_details'))->render();
+            $datasValidated = [
+                "ifu" => config('app.administrator_company_ifu'),
+                "type" => "FV",
+                "items" => [
+                    [
+                        "name" => "Jus d'orange",
+                        "price" => 1800,
+                        "quantity" => 2,
+                        "taxGroup" => "B"
+                    ],
+                    [
+                        "name" => "Lait 1/1 EX",
+                        "price" => 450,
+                        "quantity" => 3,
+                        "taxGroup" => "A"
+                    ]
+                ],
+                "client" => [
+                    "contact" => (isset($receipt_details->customer_mobile) ? $receipt_details->customer_mobile : ""),
+                    "ifu" => "",
+                    "name" => (isset($receipt_details->customer_name) ? $receipt_details->customer_name : ""),
+                    "address" => (isset($receipt_details->customer_name) ? $receipt_details->customer_name : "")
+                ],
+                "operator" => [
+                    "id" => "",
+                    "name" => ""
+                ],
+                "payment" => [
+                    [
+                        "name" => ($receipt_details->payments[0]["method"] == "Cash") ? "ESPECES" : "AUTRE",
+                        "amount" => str_replace(['.', ',00'], '', explode('€ ', $receipt_details->payments[0]["amount"])[1])
+                    ]
+                ]
+            ];
+
+            $response = Http::withToken($this->api_token)->post($this->url_facturation, $datasValidated);
+            $results = $response->json();
+            // dd($results);
+
+            $uid = $results['uid'];
+
+            $response = Http::withToken($this->api_token)->put($this->url_facturation . '/' . $uid . '/confirm');
+            $datas = (array) $response->json();
+            // dump($datas);
+
+            if(!is_null($response->json("qrCode")))
+            {
+                $qrcode = QrCode::size(200)->generate($datas['qrCode']); 
+                // dump($qrcode);       
+                // return view("qrcode", compact('datas', 'qrcode'));
+            }
+
+            $output['html_content'] = view($layout, compact('receipt_details', 'datas', 'qrcode'))->render();
         }
 
         return $output;
@@ -2068,7 +2131,7 @@ class SellPosController extends Controller
             if (! empty($pos_settings['enable_payment_link']) && $transaction->payment_status != 'paid') {
                 $payment_link = $this->transactionUtil->getInvoicePaymentLink($transaction->id, $transaction->business_id);
             }
-            dump($receipt);
+            // dump($receipt);
 
             $title = $transaction->business->name.' | '.$transaction->invoice_no;
 
