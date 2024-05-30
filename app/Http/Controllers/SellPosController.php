@@ -27,44 +27,45 @@
 
 namespace App\Http\Controllers;
 
-use App\Account;
+use App\User;
+use App\Media;
 use App\Brands;
-use App\Business;
-use App\BusinessLocation;
-use App\Category;
+use App\Account;
 use App\Contact;
+use App\Product;
+use App\TaxRate;
+use App\Business;
+use App\Category;
+use App\Warranty;
+use App\Variation;
+use Stripe\Charge;
+use Stripe\Stripe;
+use App\Transaction;
+use Razorpay\Api\Api;
 use App\CustomerGroup;
 use App\InvoiceLayout;
 use App\InvoiceScheme;
-use App\Media;
-use App\Product;
-use App\SellingPriceGroup;
-use App\TaxRate;
-use App\Transaction;
-use App\TransactionPayment;
-use App\TransactionSellLine;
+use App\EmecefInvoices;
 use App\TypesOfService;
-use App\User;
-use App\Utils\BusinessUtil;
-use App\Utils\CashRegisterUtil;
-use App\Utils\ContactUtil;
+use App\BusinessLocation;
 use App\Utils\ModuleUtil;
-use App\Utils\NotificationUtil;
+use App\SellingPriceGroup;
+use App\Utils\ContactUtil;
 use App\Utils\ProductUtil;
-use App\Utils\TransactionUtil;
-use App\Variation;
-use App\Warranty;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use App\TransactionPayment;
+use App\Utils\BusinessUtil;
 use Illuminate\Support\Str;
-use Razorpay\Api\Api;
-use Stripe\Charge;
-use Stripe\Stripe;
-use Yajra\DataTables\Facades\DataTables;
+use App\TransactionSellLine;
+use Illuminate\Http\Request;
+use App\Utils\TransactionUtil;
+use App\Utils\CashRegisterUtil;
+use App\Utils\NotificationUtil;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use App\Events\SellCreatedOrModified;
 
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Yajra\DataTables\Facades\DataTables;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class SellPosController extends Controller
@@ -770,6 +771,7 @@ class SellPosController extends Controller
         }
 
         $output['print_title'] = $receipt_details->invoice_no;
+
         //If print type browser - return the content, printer - return printer config data, and invoice format config
         if ($receipt_printer_type == 'printer') {
             $output['print_type'] = 'printer';
@@ -778,54 +780,73 @@ class SellPosController extends Controller
         } else {
             $layout = ! empty($receipt_details->design) ? 'sale_pos.receipts.'.$receipt_details->design : 'sale_pos.receipts.classic';
             // dump($receipt_details);
+            $qrcode = null;
+            $emecef_invoice = null;
 
-            $datasValidated = [
-                "ifu" => config('app.administrator_company_ifu'),
-                "type" => "FV",
-                "items" => array_map(function ($row) {
-                    return [
-                        "name" => $row['name'],
-                        "quantity" => (int) $row['quantity_uf'],
-                        "price" => (float) $row['unit_price_uf'],
-                        "taxGroup" => "A"
+            if(Transaction::find($transaction_id)->status == "final") {
+
+                // dump(EmecefInvoices::where("transaction_id", $transaction_id)->first());
+                
+                if(is_null(EmecefInvoices::where("transaction_id", $transaction_id)->first())) {
+                    $datasValidated = [
+                        "ifu" => config('app.administrator_company_ifu'),
+                        "type" => "FV",
+                        "items" => array_map(function ($row) {
+                            return [
+                                "name" => $row['name'],
+                                "quantity" => (int) $row['quantity_uf'],
+                                "price" => (float) $row['unit_price_uf'],
+                                "taxGroup" => "F"
+                            ];
+                        }, $receipt_details->lines),
+                        "client" => [
+                            "contact" => (isset($receipt_details->customer_mobile) ? $receipt_details->customer_mobile : ""),
+                            "ifu" => "",
+                            "name" => (isset($receipt_details->customer_name) ? $receipt_details->customer_name : ""),
+                            "address" => (isset($receipt_details->customer_name) ? $receipt_details->customer_name : "")
+                        ],
+                        "operator" => [
+                            "id" => "",
+                            "name" => ""
+                        ],
+                        "payment" => [
+                            [
+                                "name" => ($receipt_details->payments[0]["method"] == "Cash") ? "ESPECES" : "AUTRE",
+                                "amount" => str_replace(['.', ',00'], '', explode('€ ', $receipt_details->payments[0]["amount"])[1])
+                            ]
+                        ]
                     ];
-                }, $receipt_details->lines),
-                "client" => [
-                    "contact" => (isset($receipt_details->customer_mobile) ? $receipt_details->customer_mobile : ""),
-                    "ifu" => "",
-                    "name" => (isset($receipt_details->customer_name) ? $receipt_details->customer_name : ""),
-                    "address" => (isset($receipt_details->customer_name) ? $receipt_details->customer_name : "")
-                ],
-                "operator" => [
-                    "id" => "",
-                    "name" => ""
-                ],
-                "payment" => [
-                    [
-                        "name" => ($receipt_details->payments[0]["method"] == "Cash") ? "ESPECES" : "AUTRE",
-                        "amount" => str_replace(['.', ',00'], '', explode('€ ', $receipt_details->payments[0]["amount"])[1])
-                    ]
-                ]
-            ];
+        
+                    $response = Http::withToken($this->api_token)->post($this->url_facturation, $datasValidated);
+                    $results = $response->json();
+        
+                    $uid = $results['uid'];
+        
+                    $response = Http::withToken($this->api_token)->put($this->url_facturation . '/' . $uid . '/confirm');
+                    $datas = (array) $response->json();
 
-            $response = Http::withToken($this->api_token)->post($this->url_facturation, $datasValidated);
-            $results = $response->json();
-            // dd($results);
+                    $emecef_invoice = new EmecefInvoices();
+                    $emecef_invoice->invoice_uuid = $uid;
+                    $emecef_invoice->code_mecef = $datas['codeMECeFDGI'];
+                    $emecef_invoice->nim_mecef = $datas['nim'];
+                    $emecef_invoice->compteurs_mecef = $datas['counters'];
+                    $emecef_invoice->qrcode_mecef = $datas['qrCode'];
+                    $emecef_invoice->date_mecef = $datas['dateTime'];
+                    $emecef_invoice->transaction_id = $transaction_id;
+                    $emecef_invoice->save();
+        
+                }
 
-            $uid = $results['uid'];
-
-            $response = Http::withToken($this->api_token)->put($this->url_facturation . '/' . $uid . '/confirm');
-            $datas = (array) $response->json();
-            // dump($datas);
-
-            if(!is_null($response->json("qrCode")))
-            {
-                $qrcode = QrCode::size(200)->generate($datas['qrCode']); 
-                // dump($qrcode);       
-                // return view("qrcode", compact('datas', 'qrcode'));
+                $emecef_invoice = EmecefInvoices::where("transaction_id", $transaction_id)->first();
+    
+                if(!is_null($emecef_invoice->qrcode_mecef))
+                {
+                    $qrcode = QrCode::size(200)->generate($emecef_invoice->qrcode_mecef); 
+                }
+                
             }
 
-            $output['html_content'] = view($layout, compact('receipt_details', 'datas', 'qrcode'))->render();
+            $output['html_content'] = view($layout, compact('receipt_details', 'emecef_invoice', 'qrcode'))->render();
         }
 
         return $output;

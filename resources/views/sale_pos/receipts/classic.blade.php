@@ -656,7 +656,7 @@
 	@endif
 </div>
 
-@if (!is_null($datas))
+@if (!is_null($emecef_invoice))
 <div class="row" style="color: #000000 !important; padding: 1em">
 	<div style="font-style: italic;">
 		--- Eléments de sécurité de la facture normalisée --
@@ -670,20 +670,24 @@
 		<p class="text-center">
 			Code MECeF/DGI 
 		</p>
-		<p class="text-center" style="font-weight: bold">{{ $datas['codeMECeFDGI'] }}</p>
+		{{-- <p class="text-center" style="font-weight: bold">{{ $datas['codeMECeFDGI'] }}</p> --}}
+		<p class="text-center" style="font-weight: bold">{{ $emecef_invoice->code_mecef }}</p>
 		
 		<table class="table table-slim">
 			<tr>
 				<td class="text-left">MECeF NIM</td>
-				<td class="text-right">{{ $datas['nim'] }}</td>
+				{{-- <td class="text-right">{{ $datas['nim'] }}</td> --}}
+				<td class="text-right">{{ $emecef_invoice->nim_mecef }}</td>
 			</tr>
 			<tr>
 				<td class="text-left">MECeF Compteurs</td>
-				<td class="text-right">{{ $datas['counters'] }}</td>
+				{{-- <td class="text-right">{{ $datas['counters'] }}</td> --}}
+				<td class="text-right">{{ $emecef_invoice->compteurs_mecef }}</td>
 			</tr>
 			<tr>
 				<td class="text-left">MECeF Heure</td>
-				<td class="text-right">{{ $datas['dateTime'] }}</td>
+				{{-- <td class="text-right">{{ $datas['dateTime'] }}</td> --}}
+				<td class="text-right">{{ $emecef_invoice->date_mecef }}</td>
 			</tr>
 		</table>
     </div>

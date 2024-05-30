@@ -27,6 +27,7 @@ class InvoiceEmecefController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+    
     public function index()
     {
         $response = Http::withToken($this->api_token)->get($this->url_facturation);
