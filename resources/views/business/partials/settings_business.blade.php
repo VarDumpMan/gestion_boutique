@@ -9,6 +9,20 @@
         </div>
         <div class="col-sm-4">
             <div class="form-group">
+                {!! Form::label('num_ifu',__('business.num_ifu') . ':*') !!}
+                {!! Form::text('num_ifu', $business->num_ifu, ['class' => 'form-control', 'required',
+                'placeholder' => __('business.num_ifu')]); !!}
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="form-group">
+                {!! Form::label('emecef_token',__('business.emecef_token') . ':*') !!}
+                {!! Form::text('emecef_token', $business->emecef_token, ['class' => 'form-control', 'required',
+                'placeholder' => __('business.emecef_token')]); !!}
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="form-group">
                 {!! Form::label('start_date', __('business.start_date') . ':') !!}
                 <div class="input-group">
                     <span class="input-group-addon">

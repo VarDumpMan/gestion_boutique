@@ -362,7 +362,7 @@ class BusinessController extends Controller
                 'redeem_amount_per_unit_rp', 'min_order_total_for_redeem',
                 'min_redeem_point', 'max_redeem_point', 'rp_expiry_period',
                 'rp_expiry_type', 'custom_labels', 'weighing_scale_setting',
-                'code_label_1', 'code_1', 'code_label_2', 'code_2', 'currency_precision', 'quantity_precision', ]);
+                'code_label_1', 'code_1', 'code_label_2', 'code_2', 'currency_precision', 'quantity_precision', 'num_ifu', 'emecef_token' ]);
 
             if (! empty($request->input('enable_rp')) && $request->input('enable_rp') == 1) {
                 $business_details['enable_rp'] = 1;

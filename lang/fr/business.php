@@ -97,4 +97,7 @@
      'tax_number2' => 'Numéro de taxe 2',
      'is_active' => 'Actif',
      'created_by' => 'Créé par',
+     'num_ifu' => 'Numéro IFU de l\'entreprise',
+     'emecef_token' => 'Clé d\'API E-Mecef',
+
  ];

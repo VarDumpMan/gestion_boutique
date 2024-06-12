@@ -789,7 +789,7 @@ class SellPosController extends Controller
                 
                 if(is_null(EmecefInvoices::where("transaction_id", $transaction_id)->first())) {
                     $datasValidated = [
-                        "ifu" => config('app.administrator_company_ifu'),
+                        "ifu" => (!is_null($business_details->num_ifu)) ? $business_details->num_ifu : config('app.administrator_company_ifu'),
                         "type" => "FV",
                         "items" => array_map(function ($row) {
                             return [
@@ -817,7 +817,9 @@ class SellPosController extends Controller
                         ]
                     ];
         
-                    $response = Http::withToken($this->api_token)->post($this->url_facturation, $datasValidated);
+                    $new_api_token = (!is_null($business_details->emecef_token)) ? $business_details->emecef_token : config("app.api_gouv_token");
+
+                    $response = Http::withToken($new_api_token)->post($this->url_facturation, $datasValidated);
                     $results = $response->json();
         
                     $uid = $results['uid'];

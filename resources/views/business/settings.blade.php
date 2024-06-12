@@ -42,6 +42,7 @@
                 <!-- tab 1 start -->
                 @include('business.partials.settings_business')
                 <!-- tab 1 end -->
+                
                 <!-- tab 2 start -->
                 @include('business.partials.settings_tax')
                 <!-- tab 2 end -->
