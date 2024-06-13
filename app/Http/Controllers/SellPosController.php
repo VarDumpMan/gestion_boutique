@@ -779,13 +779,11 @@ class SellPosController extends Controller
             $output['data'] = $receipt_details;
         } else {
             $layout = ! empty($receipt_details->design) ? 'sale_pos.receipts.'.$receipt_details->design : 'sale_pos.receipts.classic';
-            // dump($receipt_details);
+
             $qrcode = null;
             $emecef_invoice = null;
 
             if(Transaction::find($transaction_id)->status == "final") {
-
-                // dump(EmecefInvoices::where("transaction_id", $transaction_id)->first());
                 
                 if(is_null(EmecefInvoices::where("transaction_id", $transaction_id)->first())) {
                     $datasValidated = [
